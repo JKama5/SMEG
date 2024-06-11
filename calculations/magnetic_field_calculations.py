@@ -12,16 +12,15 @@ def create_mesh_conductor(vertices, faces):
         N_suh=400,
     )
 
-def calculate_magnetic_field_at_center(loops, target_points, currents_mA):
-    """Calculate the magnetic field at the center point for a range of currents."""
+def calculate_magnetic_field_at_points(loops, points, currents_mA):
+    """Calculate the magnetic field at given points for a range of currents."""
     line_conductor = LineConductor(loops=loops)
-    center_point = np.array([0, 0, 0])
-    B_fields_at_center = []
+    B_fields_at_points = []
 
     for current_mA in currents_mA:
         current_A = current_mA * 1e-3  # Convert mA to A
-        B_field_unit_current = line_conductor.magnetic_field(np.array([center_point]))
-        B_field_at_center = B_field_unit_current * current_A
-        B_fields_at_center.append(np.linalg.norm(B_field_at_center[0]))  # Store the magnitude of the magnetic field
+        B_field_unit_current = line_conductor.magnetic_field(points)
+        B_field_at_points = B_field_unit_current * current_A
+        B_fields_at_points.append(B_field_at_points)
 
-    return B_fields_at_center
+    return np.array(B_fields_at_points)
