@@ -32,6 +32,8 @@ def plot_3d_model(vertices, faces, loops, target_points, B_fields_at_targets):
     for loop in loops:
         loop_polydata = pv.PolyData(loop)
         plotter.add_mesh(loop_polydata, color='orange', line_width=2)
+        print(loop_polydata)
+        print("----------------------------")
 
     # Add target points
     plotter.add_points(target_points, color='red', point_size=5)
@@ -41,5 +43,8 @@ def plot_3d_model(vertices, faces, loops, target_points, B_fields_at_targets):
         if vector is not None and np.linalg.norm(vector) > 0:  # Only create arrows for non-zero vectors
             arrow = pv.Arrow(start=point, direction=vector, scale=0.05)
             plotter.add_mesh(arrow, color='magenta')
+
+    # Add 3D axes
+    plotter.add_axes()
 
     plotter.show()

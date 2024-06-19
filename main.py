@@ -2,22 +2,35 @@ import numpy as np
 from calculations.load_save import load_coil_mesh, load_loops
 from calculations.magnetic_field_calculations import create_mesh_conductor, calculate_magnetic_field_at_points
 from calculations.plot_results import plot_magnetic_field_vs_current, plot_3d_model
+from calculations.flatten_windings import polydata_to_points, plot_points 
+import pyvista as pv
 
-plot3D = False
+plot3D = True
 plot_graph_160_points = False
-plot_graph_center = True
+plot_graph_center = False
 
 
 # Load coil mesh and loops
 coilmesh_data = load_coil_mesh()
 loops = load_loops()
+points = []
+plotter = pv.Plotter()
+plotter.set_background("white")
+
+for loop in loops:
+    loop_polydata = pv.PolyData(loop)
+    plotter.add_mesh(loop_polydata, color='orange', line_width=2)
+# Add 3D axes
+plotter.add_axes()
+
+plotter.show()
 
 # Create MeshConductor
 coil = create_mesh_conductor(coilmesh_data['vertices'], coilmesh_data['faces'])
 
 # Set up target points
 center = np.array([0, 0, 0])
-sidelength = 0.2  # 0.2 meter
+sidelength = 0.4  # 0.35 meter
 n = 8
 xx = np.linspace(-sidelength / 2, sidelength / 2, n)
 yy = np.linspace(-sidelength / 2, sidelength / 2, n)
@@ -49,7 +62,7 @@ B_fields_at_targets = line_conductor.magnetic_field(target_points) * current_A
 if plot3D:
     # Plot the 3D model
     plot_3d_model(coilmesh_data['vertices'], coilmesh_data['faces'], loops, target_points, B_fields_at_targets)
-
+    
 if plot_graph_center:
     # Plot the results
     plot_magnetic_field_vs_current(currents_mA, B_fields_at_center)

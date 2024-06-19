@@ -7,7 +7,9 @@ from bfieldtools.contour import scalar_contour
 import pkg_resources
 import mosek
 
-def generate_windings(new_radius_scale=0.25, new_height_scale=0.25/2, n_contours=7):
+LOOPS = None
+
+def generate_windings(new_radius_scale=(0.75)/2, new_height_scale=(0.5)/2, n_contours=7):
     # Load example coil mesh
     coilmesh = trimesh.load(
         file_obj=pkg_resources.resource_filename(
@@ -33,7 +35,7 @@ def generate_windings(new_radius_scale=0.25, new_height_scale=0.25/2, n_contours
 
     # Set up target points
     center = np.array([0, 0, 0])
-    sidelength = 0.2  # 0.2 meter
+    sidelength = 0.4  # 0.2 meter
     n = 8
     xx = np.linspace(-sidelength / 2, sidelength / 2, n)
     yy = np.linspace(-sidelength / 2, sidelength / 2, n)
@@ -49,7 +51,7 @@ def generate_windings(new_radius_scale=0.25, new_height_scale=0.25/2, n_contours
 
     # Define the undesired magnetic field
     undesired_field = np.zeros(target_points.shape)
-    undesired_field[:, 1] =  0.1  # Example non-uniform field in x-direction AMPS
+    undesired_field[:, 1] =  1  # Example non-uniform field in y-direction
     target_field = -undesired_field
 
     # Create bfield specifications
@@ -73,17 +75,18 @@ def generate_windings(new_radius_scale=0.25, new_height_scale=0.25/2, n_contours
 
     if coil.s is not None:
         loops = scalar_contour(coil.mesh, coil.s.vert, N_contours=n_contours)
-
-        # Save coil mesh and windings
-        with open('coilmesh1.pkl', 'wb') as f:
+        
+        with open('coilmesh_Y.pkl', 'wb') as f:
             pickle.dump({'vertices': coilmesh1.vertices, 'faces': coilmesh1.faces}, f)
 
-        with open('loops.pkl', 'wb') as f:
+        with open('loops_Y.pkl', 'wb') as f:
             pickle.dump(loops, f)
 
         return True
     else:
         return False
+
+
 
 if __name__ == "__main__":
     success = generate_windings()
