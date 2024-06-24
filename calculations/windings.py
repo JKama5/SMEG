@@ -7,9 +7,9 @@ from bfieldtools.contour import scalar_contour
 import pkg_resources
 import mosek
 
-LOOPS = None
 
-def generate_windings(new_radius_scale=(0.75)/2, new_height_scale=(0.5)/2, n_contours=7):
+def generate_windings(new_radius_scale=1.0/2, new_height_scale=0.40/2, n_contours=3, coil_type='Y'):
+            # COIL TYPE IS FOR THE ROOMS PERSPECTIVE
     # Load example coil mesh
     coilmesh = trimesh.load(
         file_obj=pkg_resources.resource_filename(
@@ -33,9 +33,9 @@ def generate_windings(new_radius_scale=(0.75)/2, new_height_scale=(0.5)/2, n_con
         N_suh=400,
     )
 
-    # Set up target points
+    # Define target points
     center = np.array([0, 0, 0])
-    sidelength = 0.4  # 0.2 meter
+    sidelength = 0.3  # 0.2 meter
     n = 8
     xx = np.linspace(-sidelength / 2, sidelength / 2, n)
     yy = np.linspace(-sidelength / 2, sidelength / 2, n)
@@ -51,7 +51,10 @@ def generate_windings(new_radius_scale=(0.75)/2, new_height_scale=(0.5)/2, n_con
 
     # Define the undesired magnetic field
     undesired_field = np.zeros(target_points.shape)
-    undesired_field[:, 1] =  1  # Example non-uniform field in y-direction
+    if coil_type == 'X': undesired_field[:, 1] = 25e-9      # Example non-uniform field in x-direction
+    elif coil_type == 'Y': undesired_field[:, 2] = 25e-9    # Example non-uniform field in y-direction
+    elif coil_type == 'Z': undesired_field[:, 0] = 25e-9    # Example non-uniform field in z-direction
+    else: raise ValueError("Invalid coil type. Must be 'X', 'Y', or 'Z'.")
     target_field = -undesired_field
 
     # Create bfield specifications
@@ -75,21 +78,44 @@ def generate_windings(new_radius_scale=(0.75)/2, new_height_scale=(0.5)/2, n_con
 
     if coil.s is not None:
         loops = scalar_contour(coil.mesh, coil.s.vert, N_contours=n_contours)
-        
-        with open('coilmesh_Y.pkl', 'wb') as f:
-            pickle.dump({'vertices': coilmesh1.vertices, 'faces': coilmesh1.faces}, f)
 
-        with open('loops_Y.pkl', 'wb') as f:
-            pickle.dump(loops, f)
+        if coil_type == 'X':
+            with open('coilmesh_X.pkl', 'wb') as f:
+                pickle.dump({'vertices': coilmesh1.vertices, 'faces': coilmesh1.faces}, f)
+
+            with open('loops_X.pkl', 'wb') as f:
+                pickle.dump(loops, f)
+
+            with open('target_points_X.pkl', 'wb') as f:
+                pickle.dump(target_points, f)
+
+        if coil_type == 'Y':
+            with open('coilmesh_Y.pkl', 'wb') as f:
+                pickle.dump({'vertices': coilmesh1.vertices, 'faces': coilmesh1.faces}, f)
+
+            with open('loops_Y.pkl', 'wb') as f:
+                pickle.dump(loops, f)
+
+            with open('target_points_Y.pkl', 'wb') as f:
+                pickle.dump(target_points, f)
+        
+        if coil_type == 'Z':
+            with open('coilmesh_Z.pkl', 'wb') as f:
+                pickle.dump({'vertices': coilmesh1.vertices, 'faces': coilmesh1.faces}, f)
+
+            with open('loops_Z.pkl', 'wb') as f:
+                pickle.dump(loops, f)
+
+            with open('target_points_Z.pkl', 'wb') as f:
+                pickle.dump(target_points, f)
 
         return True
     else:
         return False
 
 
-
 if __name__ == "__main__":
-    success = generate_windings()
+    success = generate_windings(coil_type='Y')
     if success:
         print("Windings generated and saved successfully.")
     else:

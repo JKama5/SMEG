@@ -24,7 +24,7 @@ def save_loops_as_dxf(looppolydata, filename):
         flattened_points[:, 2] = 0  # Z-coordinate flattened to 0
 
         # Add each loop as a polyline to the DXF document for KiCad upload
-        msp.add_lwpolyline(flattened_points[:, :2], is_closed=True)
+        msp.add_lwpolyline(flattened_points[:, :2])
     
     # Save the DXF document for KiCad
     doc.saveas(filename)
