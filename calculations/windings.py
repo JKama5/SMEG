@@ -8,7 +8,7 @@ import pkg_resources
 import mosek
 
 
-def generate_windings(new_radius_scale=1.0/2, new_height_scale=0.40/2, n_contours=3, coil_type='Y'):
+def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contours=2, coil_type='Y'):
             # COIL TYPE IS FOR THE ROOMS PERSPECTIVE
     # Load example coil mesh
     coilmesh = trimesh.load(

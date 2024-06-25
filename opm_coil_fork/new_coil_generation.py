@@ -1,18 +1,13 @@
 import numpy as np
 import scipy
-from scipy.sparse import csr_matrix
-from scipy.linalg import block_diag
 import trimesh
 import pyvista as pv
 import mosek
 import matplotlib.pyplot as plt
-from bfieldtools import sphtools
 from bfieldtools.mesh_conductor import MeshConductor
-from bfieldtools.utils import combine_meshes, load_example_mesh
 from bfieldtools.coil_optimize import optimize_streamfunctions
 from bfieldtools.contour import scalar_contour
 from bfieldtools.line_conductor import LineConductor
-from bfieldtools.viz import plot_3d_current_loops
 from metrics import homogeneity, efficiency, error
 from line_drawer import LineDrawer, get_shifted_line
 from file_io import get_loop_colors, export_to_kicad, _check_bounds
@@ -21,7 +16,36 @@ import pickle
 import pkg_resources
 from flatten_windings import flatten_loops, plot_loops_2d, determine_color_auto
 
-def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contours=3, coil_type='X'):
+"""
+This script is written to generate windings specific for the Single Layer MSR
+The maximum field in the room is around 25nT so the coil is designed to null
+only nT fields in the x, y, and z direction. The coil is cylidnrical and then
+transformed to be a planar coil for PCB fabrication.
+
+"""
+
+
+def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contours=3, coil_type='Y'):
+    """
+    Generate windings for the coil.
+
+    Parameters
+    ----------
+    new_radius_scale : float, optional
+        The multiplier for the mesh's radius, by default 0.73/2
+    new_height_scale : float, optional
+        The multiplier for the mesh's height, by default 0.40/2
+    n_contours : int, optional
+        How many contours the windings should take, by default 3
+    coil_type : str, optional
+        The coil type, expects either 'X','Y','Z' based on the sheilded rooms reference frame, by default 'Y'
+
+    Returns
+    -------
+    tuple
+        A tuple containing the vertices, faces, stream functions, loops, target points, and target field.
+    """
+    
     # Load example coil mesh
     coilmesh = trimesh.load(
         file_obj=pkg_resources.resource_filename(
@@ -29,7 +53,17 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
         ),
         process=True,
     )
-
+    ### Adjust the coil mesh for the new radius and height
+    ### This is the decided scaling for each of the meshes
+    if coil_type == 'X':
+        n_contours = 3
+        new_radius_scale = 0.75/2
+    if coil_type == 'Y': 
+        n_contours = 2
+        new_radius_scale = 0.73/2
+    if coil_type == 'Z':
+        n_contours = 3 
+        new_radius_scale = 0.74/2
     coilmesh1 = coilmesh.copy()
 
     # Adjust the coil mesh vertices for the new radius and height
@@ -47,7 +81,7 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
 
     # Define target points
     center = np.array([0, 0, 0])
-    sidelength = 0.3  # 0.2 meter
+    sidelength = 0.3  # 0.3 meter
     n = 8
     xx = np.linspace(-sidelength / 2, sidelength / 2, n)
     yy = np.linspace(-sidelength / 2, sidelength / 2, n)
@@ -63,9 +97,9 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
 
     # Define the undesired magnetic field
     undesired_field = np.zeros(target_points.shape)
-    if coil_type == 'X': undesired_field[:, 1] = 25e-9      # Example non-uniform field in x-direction
-    elif coil_type == 'Y': undesired_field[:, 2] = 25e-9    # Example non-uniform field in y-direction
-    elif coil_type == 'Z': undesired_field[:, 0] = 25e-9    # Example non-uniform field in z-direction
+    if coil_type == 'X': undesired_field[:, 1] = 25e-9      # Example non-uniform field in x-direction (rooms reference frame)
+    elif coil_type == 'Y': undesired_field[:, 2] = 25e-9    # Example non-uniform field in y-direction (rooms reference frame)
+    elif coil_type == 'Z': undesired_field[:, 0] = 25e-9    # Example non-uniform field in z-direction (rooms reference frame)
     else: raise ValueError("Invalid coil type. Must be 'X', 'Y', or 'Z'.")
     target_field = -undesired_field
 
@@ -91,6 +125,7 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
     if coil.s is not None:
         loops = scalar_contour(coil.mesh, coil.s.vert, N_contours=n_contours)
 
+        #Save the data for the coil through Pickle to make use of faster code testing and debugging
         if coil_type == 'X':
             with open('coilmesh_X.pkl', 'wb') as f:
                 pickle.dump({'vertices': coilmesh1.vertices, 'faces': coilmesh1.faces}, f)
@@ -131,15 +166,8 @@ class CylindricalCoil:
 
     Parameters
     ----------
-    cylindricalmesh : mesh
-        The base cylindrical mesh to be used 
-        for the coil.
-    center : array, shape (3, )
-        The center of the biplanar mesh pair.
-    N_suh : int
-        The number of harmonics to use in 
-    standoff : float
-        The distance between the mesh pairs.
+    coil_type : str, optional
+        The coil type, expects either 'X','Y','Z' based on the sheilded rooms reference frame, by default 'X'.
 
     Attributes
     ----------
@@ -157,11 +185,23 @@ class CylindricalCoil:
         The resistance of the coil in ohms.
     """
 
-    def __init__(self, new_radius_scale, new_height_scale, n_contours=3, coil_type='X'):
+    def __init__(self, coil_type='X'):
+        """
+        Initialize the CylindricalCoil class.
 
-        vertices, faces, s, loops, target_points, target_field = generate_windings(
-            new_radius_scale, new_height_scale, n_contours, coil_type
-        )
+        Parameters
+        ----------
+        new_radius_scale : float
+            The multiplier for the mesh's radius.
+        new_height_scale : float
+            The multiplier for the mesh's height.
+        n_contours : int, optional
+            How many contours the windings should take, by default 3.
+        coil_type : str, optional
+            The coil type, expects either 'X','Y','Z' based on the sheilded rooms reference frame, by default 'X'.
+        """
+
+        vertices, faces, s, loops, target_points, target_field = generate_windings(coil_type)
 
         self.vertices = vertices
         self.faces = faces
@@ -175,6 +215,7 @@ class CylindricalCoil:
         self.BCu = list()
         self.line_conductor_ = LineConductor(loops=loops)
         self.flatloops = flatten_loops(loops)
+        self.coil_type = coil_type
 
     def predict(self, target_points):
         """Predict the field.
@@ -200,6 +241,15 @@ class CylindricalCoil:
         ----------
         target_points : array, (n_points, 3)
             Plot the field at the target points.
+        metrics : str or list, optional
+            The metrics to evaluate, by default 'all'.
+        target_type : str, optional
+            The target type, by default 'dc'.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the evaluation scores.
         """
         if metrics == 'all':
             metrics = ['efficiency', 'error', 'homog', 'inductance',
@@ -260,13 +310,17 @@ class CylindricalCoil:
                 loop = np.vstack([loop, loop[0]])  # make closed loop
             loops.append((np.array(loop) * 1000))
 
+
         colors = determine_color_auto(self.loops, (0,0,0))
-        # Discard z-coordinate
-        loops = [np.array(loop)[:, [0, 1]].tolist() for loop in loops]
 
         fig = plt.figure()
         for color, loop in zip(colors, loops):
             loop_arr = np.array(loop)
+            #If the loops are in a cylinder (only on Y coil) they need to be correctly wrapped
+            if self.coil_type == 'Y':
+                # Sort based on the first column (x coordinate)
+                sorted_points = loop_arr[loop_arr[:, 0].argsort()]
+                loop_arr = sorted_points
             plt.plot(loop_arr[:, 0], loop_arr[:, 1], color=color)
 
         ld = LineDrawer(fig)
@@ -319,8 +373,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     # Create an instance of CylindricalCoil
-    coil = CylindricalCoil(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contours=3, coil_type='Y')
-
+    coil = CylindricalCoil(coil_type='X')
 
     # Make cuts to join loops
     coil.make_cuts()
