@@ -3,6 +3,7 @@ import scipy
 import trimesh
 import pyvista as pv
 import mosek
+import math
 import matplotlib.pyplot as plt
 from bfieldtools.mesh_conductor import MeshConductor
 from bfieldtools.coil_optimize import optimize_streamfunctions
@@ -25,7 +26,7 @@ transformed to be a planar coil for PCB fabrication.
 """
 
 
-def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contours=3, coil_type='Y'):
+def generate_windings(coil_type, new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contours=3):
     """
     Generate windings for the coil.
 
@@ -185,7 +186,7 @@ class CylindricalCoil:
         The resistance of the coil in ohms.
     """
 
-    def __init__(self, coil_type='X'):
+    def __init__(self, coil_type):
         """
         Initialize the CylindricalCoil class.
 
@@ -322,22 +323,58 @@ class CylindricalCoil:
                 sorted_points = loop_arr[loop_arr[:, 0].argsort()]
                 loop_arr = sorted_points
             plt.plot(loop_arr[:, 0], loop_arr[:, 1], color=color)
-
-        ld = LineDrawer(fig)
-        line_cuts, line_cuts_shifted = ld.get_line_cuts()
-
-        fig, axes = plt.subplots(2, 1, sharex=True, sharey=True, figsize=(8, 8))
-        for line_cut, line_cut_shifted in zip(line_cuts, line_cuts_shifted):
-            continuous_loop, reverse_paths, _, _, _, direction = join_loops_at_cuts(
-                loops, line_cut, line_cut_shifted, colors)
-            self.FCu.append(continuous_loop)
-            self.BCu.append(reverse_paths)
-
-            color = 'r' if direction == 'cc' else 'b'
-            axes[0].plot(continuous_loop[:, 0], continuous_loop[:, 1], f'{color}-', alpha=0.6)
-            axes[1].plot(reverse_paths[:, 0], reverse_paths[:, 1], 'g', zorder=0, linewidth=3, alpha=0.6)
         plt.show()
 
+        # ld = LineDrawer(fig)
+        # line_cuts, line_cuts_shifted = ld.get_line_cuts()
+
+        # fig, axes = plt.subplots(2, 1, sharex=True, sharey=True, figsize=(8, 8))
+        # for line_cut, line_cut_shifted in zip(line_cuts, line_cuts_shifted):
+        #     continuous_loop, reverse_paths, _, _, _, direction = join_loops_at_cuts(
+        #         loops, line_cut, line_cut_shifted, colors)
+        #     self.FCu.append(continuous_loop)
+        #     self.BCu.append(reverse_paths)
+
+        #     color = 'r' if direction == 'cc' else 'b'
+        #     axes[0].plot(continuous_loop[:, 0], continuous_loop[:, 1], f'{color}-', alpha=0.6)
+        #     axes[1].plot(reverse_paths[:, 0], reverse_paths[:, 1], 'g', zorder=0, linewidth=3, alpha=0.6)
+        # plt.show()
+
+    def assign_front_back(self):
+        """Assign front and back loops."""
+        all_points = np.vstack(self.flatloops)
+        min_x = np.min(all_points[:, 0])
+        max_x = np.max(all_points[:, 0])
+        min_y = np.min(all_points[:, 1])
+        max_y = np.max(all_points[:, 1])
+
+        diff_x = max_x - min_x
+        diff_y = max_y - min_y
+
+
+        # Calculate the current width and height
+        current_width = diff_x
+        current_height = diff_y / 2.0
+        
+        # Define the target dimensions
+        target_width = 2350.0  # mm
+        target_height = 500.0  # mm
+        
+        # Calculate scaling factors
+        scale_x = target_width / current_width
+        scale_y = target_height / current_height
+    
+        # Scale the loops
+        for i, loop in enumerate(self.flatloops):
+            self.flatloops[i][:, 0] = loop[:, 0] * scale_x
+            self.flatloops[i][:, 1] = loop[:, 1] * scale_y
+
+        color = determine_color_auto(self.loops, (0, 0, 0))
+        for i, _ in enumerate(self.flatloops):
+            if color[i] == 'r':
+                self.FCu.append(self.flatloops[i])
+            else:
+                self.BCu.append(self.flatloops[i])
 
     def save(self, pcb_fname, kicad_header_fname, bounds=None,
              origin=(750, 750), bounds_wholeloop=True):
@@ -354,17 +391,17 @@ class CylindricalCoil:
         origin : tuple of (x, y)
             The origin in mm.
         """
-        FCu_truncated = list()
-        BCu_truncated = list()
-        for FCu_loop, BCu_loop in zip(self.FCu, self.BCu):
-            if _check_bounds(FCu_loop, bounds) or (bounds_wholeloop is False):
-                FCu_truncated.append(FCu_loop)
-                BCu_truncated.append(BCu_loop)
+        # FCu_truncated = list()
+        # BCu_truncated = list()
+        # for FCu_loop, BCu_loop in zip(self.FCu, self.BCu):
+        #     if _check_bounds(FCu_loop, bounds) or (bounds_wholeloop is False):
+        #         FCu_truncated.append(FCu_loop)
+        #         BCu_truncated.append(BCu_loop)
         
         export_to_kicad(pcb_fname=pcb_fname,
                         kicad_header_fname=kicad_header_fname,
                         origin=origin,
-                        loops={'F.Cu': FCu_truncated, 'B.Cu': BCu_truncated},
+                        loops={'F.Cu': self.FCu, 'B.Cu': self.BCu},
                         net=1, scaling=1, trace_width=self.trace_width,
                         bounds=bounds, bounds_wholeloop=bounds_wholeloop)
 
@@ -372,9 +409,13 @@ class CylindricalCoil:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
+    pcb_name = 'coil_Z.kicad_pcb'
+    kicad_header_fname = 'kicad_header.txt'
+    origin = (0,0)
+    bounds = (-1300,1300,-1300,1300)
+    
     # Create an instance of CylindricalCoil
-    coil = CylindricalCoil(coil_type='X')
-
-    # Make cuts to join loops
-    coil.make_cuts()
+    coil = CylindricalCoil(coil_type='Z')
+    coil.assign_front_back()
+    coil.save(pcb_name, kicad_header_fname, bounds=bounds, origin=origin)
 
