@@ -70,8 +70,4 @@
 			(outputdirectory "")
 		)
 	)
-	(gr_line (start 0 -500) (end 2550 -500) (layer "Edge.Cuts") (width 0.15))
-  	(gr_line (start 2550 -500) (end 2550 500) (layer "Edge.Cuts") (width 0.15))
-  	(gr_line (start 2550 500) (end 0 500) (layer "Edge.Cuts") (width 0.15))
-  	(gr_line (start 0 500) (end 0 -500) (layer "Edge.Cuts") (width 0.15))
 	(net 1 "")

@@ -59,6 +59,7 @@ def generate_windings(coil_type, new_radius_scale=0.73/2, new_height_scale=0.40/
     if coil_type == 'X':
         n_contours = 3
         new_radius_scale = 0.75/2
+
     if coil_type == 'Y': 
         n_contours = 2
         new_radius_scale = 0.73/2
@@ -157,9 +158,9 @@ def generate_windings(coil_type, new_radius_scale=0.73/2, new_height_scale=0.40/
             with open('target_points_Z.pkl', 'wb') as f:
                 pickle.dump(target_points, f)
 
-        return coilmesh1.vertices, coilmesh1.faces, coil.s, loops, target_points, target_field
+        return coilmesh1.vertices, coilmesh1.faces, coil.s, loops, target_points, target_field, new_radius_scale
     else:
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None
 
 
 class CylindricalCoil:
@@ -202,7 +203,7 @@ class CylindricalCoil:
             The coil type, expects either 'X','Y','Z' based on the sheilded rooms reference frame, by default 'X'.
         """
 
-        vertices, faces, s, loops, target_points, target_field = generate_windings(coil_type)
+        vertices, faces, s, loops, target_points, target_field, radius = generate_windings(coil_type)
 
         self.vertices = vertices
         self.faces = faces
@@ -215,8 +216,10 @@ class CylindricalCoil:
         self.FCu = list()
         self.BCu = list()
         self.line_conductor_ = LineConductor(loops=loops)
-        self.flatloops = flatten_loops(loops)
+        self.flatloops = flatten_loops(loops, coil_type)
         self.coil_type = coil_type
+        self.radius = radius
+        self.circum = math.pi*2*self.radius * 1000
 
     def predict(self, target_points):
         """Predict the field.
@@ -357,7 +360,7 @@ class CylindricalCoil:
         current_height = diff_y / 2.0
         
         # Define the target dimensions
-        target_width = 2350.0  # mm
+        target_width = self.circum  # mm
         target_height = 500.0  # mm
         
         # Calculate scaling factors
@@ -409,13 +412,13 @@ class CylindricalCoil:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    pcb_name = 'coil_Z.kicad_pcb'
+    pcb_name = 'coil_X.kicad_pcb' # REMEMBER TO CHANGE THIS FOR EACH COIL
     kicad_header_fname = 'kicad_header.txt'
-    origin = (0,0)
     bounds = (-1300,1300,-1300,1300)
     
     # Create an instance of CylindricalCoil
-    coil = CylindricalCoil(coil_type='Z')
+    coil = CylindricalCoil(coil_type='X')
+    origin = (-(coil.circum / 2.0 ),0)
     coil.assign_front_back()
     coil.save(pcb_name, kicad_header_fname, bounds=bounds, origin=origin)
 
