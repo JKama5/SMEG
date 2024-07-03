@@ -211,8 +211,8 @@ class CylindricalCoil:
         self.loops = loops
         self.target_points = target_points
         self.target_field = target_field
-        self.trace_width = 4     # in mm
-        self.cu_oz = 2           # oz per ft^2
+        self.trace_width = 10     # in mm
+        self.cu_oz = 0.5           # oz per ft^2
         self.FCu = list()
         self.BCu = list()
         self.line_conductor_ = LineConductor(loops=loops)
@@ -373,6 +373,7 @@ class CylindricalCoil:
             self.flatloops[i][:, 1] = loop[:, 1] * scale_y
 
         color = determine_color_auto(self.loops, (0, 0, 0))
+
         for i, _ in enumerate(self.flatloops):
             if color[i] == 'r':
                 self.FCu.append(self.flatloops[i])
@@ -412,13 +413,14 @@ class CylindricalCoil:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    pcb_name = 'coil_X.kicad_pcb' # REMEMBER TO CHANGE THIS FOR EACH COIL
+    pcb_name = 'coil_Y.kicad_pcb' # REMEMBER TO CHANGE THIS FOR EACH COIL
     kicad_header_fname = 'kicad_header.txt'
     bounds = (-1300,1300,-1300,1300)
     
     # Create an instance of CylindricalCoil
-    coil = CylindricalCoil(coil_type='X')
+    coil = CylindricalCoil(coil_type='Y')
     origin = (-(coil.circum / 2.0 ),0)
     coil.assign_front_back()
     coil.save(pcb_name, kicad_header_fname, bounds=bounds, origin=origin)
+    
 
