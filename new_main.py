@@ -8,9 +8,9 @@ from calculations.flatten_windings import flatten_loops, plot_loops_2d, determin
 #from opm_coil_fork.biplanar_coil import BiplanarCoil
 
 # Load coil mesh and loops
-coilmesh_data = load_coil_mesh('coilmesh_Y.pkl')
-loops = load_loops('loops_Y.pkl')
-target_points = load_target_points('target_points_Y.pkl')
+coilmesh_data = load_coil_mesh('coilmesh_Z.pkl')
+loops = load_loops('loops_Z.pkl')
+target_points = load_target_points('target_points_Z.pkl')
 origin = np.zeros(3) 
 currents_mA = np.linspace(0, 100, 101)  # 0mA to 100mA in 1mA steps
 current_mA = 10  # 10 mA
@@ -30,7 +30,7 @@ plot_3d_model(coilmesh_data['vertices'], coilmesh_data['faces'], loops, target_p
 
 
 # Plot the 2D model of the coil windings for PCB fabrication
-flattened_loops = flatten_loops(loops)
+flattened_loops = flatten_loops(loops,'Z')
 colors = determine_color_auto(loops, origin)
 flat = plot_loops_2d(flattened_loops, colors, plotter=pv.Plotter())
 

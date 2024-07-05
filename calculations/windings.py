@@ -8,7 +8,7 @@ import pkg_resources
 import mosek
 
 
-def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contours=2, coil_type='Y'):
+def generate_windings(new_diameter=750, new_height_scale=500/2, n_contours=50, coil_type='Z'):
             # COIL TYPE IS FOR THE ROOMS PERSPECTIVE
     # Load example coil mesh
     coilmesh = trimesh.load(
@@ -21,7 +21,7 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
     coilmesh1 = coilmesh.copy()
 
     # Adjust the coil mesh vertices for the new radius and height
-    coilmesh1.vertices[:, :2] *= new_radius_scale  # Scale x and y coordinates for radius
+    coilmesh1.vertices[:, :2] *= new_diameter  # Scale x and y coordinates for radius
     coilmesh1.vertices[:, 2] *= new_height_scale  # Scale z coordinate for height
 
     # Create MeshConductor
@@ -35,8 +35,8 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
 
     # Define target points
     center = np.array([0, 0, 0])
-    sidelength = 0.3  # 0.2 meter
-    n = 8
+    sidelength = 100 # mm
+    n = 4
     xx = np.linspace(-sidelength / 2, sidelength / 2, n)
     yy = np.linspace(-sidelength / 2, sidelength / 2, n)
     zz = np.linspace(-sidelength / 2, sidelength / 2, n)
@@ -60,7 +60,7 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
     # Create bfield specifications
     target_spec = {
         "coupling": coil.B_coupling(target_points),
-        "abs_error": 0.01,
+        "abs_error": 0.05,
         "target": target_field,
     }
 
@@ -115,7 +115,7 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
 
 
 if __name__ == "__main__":
-    success = generate_windings(coil_type='Y')
+    success = generate_windings(coil_type='Z')
     if success:
         print("Windings generated and saved successfully.")
     else:
