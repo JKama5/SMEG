@@ -193,7 +193,7 @@ class CylindricalCoil:
         self.target_points = target_points
         self.target_field = target_field
         self.trace_width = 5     # in mm
-        self.cu_oz = 1           # oz per ft^2
+        self.cu_oz = 2           # oz per ft^2
         self.FCu = list()
         self.BCu = list()
         self.line_conductor_ = LineConductor(loops=loops)
@@ -382,9 +382,8 @@ if __name__ == '__main__':
     coil = CylindricalCoil(coil_type=coil_type)
     origin = (-(coil.circum / 2.0 ),0)
 
-    coil.assign_front_back(coil.flatloops, coil.color)
+    coil.assign_front_back()
     coil.save(pcb_name, kicad_header_fname, bounds=bounds, origin=origin, side = "left", bound = -200)
-    # print(f"Resiatance: {coil.resistance}")
-    # print(f"efficiency: {coil.evaluate([0,0,0], coil.target_field, metrics='efficiency')}")
+    print(f"Resiatance: {coil.resistance}")
     
 
