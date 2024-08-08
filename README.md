@@ -5,7 +5,7 @@
 This repository contains scripts developed for generating and evaluating cylindrical coils. The scripts are designed to facilitate the creation of coil windings and save relevant data for further analysis and optimization.
 
 ## Scripts
-### /Calculations
+### /calculations
 ### 1. `windings.py`
 
 This script is responsible for generating coil windings based on specified parameters. It provides flexibility in defining the contours and configuration of the coils, allowing for efficient coil design and testing.
