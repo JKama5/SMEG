@@ -340,6 +340,7 @@ class CylindricalCoil:
             else:
                 self.BCu.append(self.flatloops[i])
 
+
     def save(self, pcb_fname, kicad_header_fname, origin,
              bounds=None, bounds_wholeloop=True, side = None, bound = 0):
         """Save the files to be loaded in KICAD.
@@ -374,16 +375,18 @@ class CylindricalCoil:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     coil_type = 'X'
-    pcb_name = f'coil_{coil_type}_left.kicad_pcb' 
+    pcb_name = f'coil_{coil_type}_testing_size.kicad_pcb' 
     kicad_header_fname = 'kicad_header.txt'
     bounds = (-1300,1300,-1300,1300)
     
     # Create an instance of CylindricalCoil
     coil = CylindricalCoil(coil_type=coil_type)
     origin = (-(coil.circum / 2.0 ),0)
-
+    length = coil.length
+    print(f"Length: {length}")
     coil.assign_front_back()
     coil.save(pcb_name, kicad_header_fname, bounds=bounds, origin=origin, side = "left", bound = -200)
     print(f"Resiatance: {coil.resistance}")
+    
     
 

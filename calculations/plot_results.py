@@ -68,7 +68,7 @@ def plot_3d_model(vertices, faces, loops, target_points, B_fields_at_targets, co
     # # Create arrows to represent the magnetic field at each target point
     for point, vector in zip(target_points, B_fields_at_targets):
         if vector is not None and np.linalg.norm(vector) > 0:  # Only create arrows for non-zero vectors
-            arrow = pv.Arrow(start=point, direction=vector, scale=10)
+            arrow = pv.Arrow(start=point, direction=vector, scale=0.05)
             plotter.add_mesh(arrow, color='magenta')
 
 

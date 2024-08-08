@@ -8,9 +8,9 @@ from calculations.flatten_windings import flatten_loops, plot_loops_2d, determin
 #from opm_coil_fork.biplanar_coil import BiplanarCoil
 
 # Load coil mesh and loops
-coilmesh_data = load_coil_mesh('coilmesh_Z.pkl')
-loops = load_loops('loops_Z.pkl')
-target_points = load_target_points('target_points_Z.pkl')
+coilmesh_data = load_coil_mesh('coilmesh_X.pkl')
+loops = load_loops('loops_X.pkl')
+target_points = load_target_points('target_points_X.pkl')
 origin = np.zeros(3) 
 currents_mA = np.linspace(0, 100, 101)  # 0mA to 100mA in 1mA steps
 current_mA = 10  # 10 mA
@@ -20,17 +20,17 @@ current_A = current_mA * 1e-3  # Convert mA to A
 from bfieldtools.line_conductor import LineConductor
 
 line_conductor = LineConductor(loops=loops)
-B_fields_at_targets = line_conductor.magnetic_field(target_points) * current_A
 
 # Plot the 3D model of the coil, windings, and magnetic field
 B_fields_at_center = calculate_magnetic_field_at_points(loops, origin, currents_mA)
 plot_magnetic_field_vs_current(currents_mA, B_fields_at_center)
+
 B_fields_at_targets = line_conductor.magnetic_field(target_points) * current_A
 plot_3d_model(coilmesh_data['vertices'], coilmesh_data['faces'], loops, target_points, B_fields_at_targets)
 
 
 # Plot the 2D model of the coil windings for PCB fabrication
-flattened_loops = flatten_loops(loops,'Z')
+flattened_loops = flatten_loops(loops,'X')
 colors = determine_color_auto(loops, origin)
 flat = plot_loops_2d(flattened_loops, colors, plotter=pv.Plotter())
 
