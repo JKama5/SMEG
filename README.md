@@ -44,3 +44,39 @@ Ensure you have the following installed on your system:
 1. Clone this repository:
    ```bash
    git clone https://github.com/JKama5/SMEG.git
+   ```
+
+2. Navigate to the directory
+   ```bash
+   cd directory/SMEG
+   ```
+3. Install the required packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## Usage
+
+### Generate Coil Windings
+
+   ```bash
+   python3 calculations/windings.py --parameter1 value1 --parameter2 value2 --paramater3 value3
+   ```
+### Coil Evaluation
+   ```bash
+   python3 new_main.py 
+   ```
+
+## Contributing
+
+Contributions are welcome! If you have any suggestions, improvements, or bug fixes, please submit a pull request or open an issue.
+
+### License
+
+This project is licensed under the MIT License. See the `LICENSE` file for more details.
+
+### Contact
+
+For any questions or inquiries, please contact Jack Kamataris at `jakamataris@WPI.edu`
+
+
