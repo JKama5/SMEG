@@ -74,7 +74,7 @@ def python_to_kicad(
 
 def export_to_kicad(pcb_fname, kicad_header_fname, loops, origin=(600, 600),
                     net=1, scaling=1, trace_width=2., bounds=None,
-                    bounds_wholeloop=True):
+                    bounds_wholeloop=True, side = None, bound = 0):
 
     print('export to kicad %s: \n' % (pcb_fname))
 
@@ -98,10 +98,23 @@ def export_to_kicad(pcb_fname, kicad_header_fname, loops, origin=(600, 600),
                     seg = loop[seg_idx+1]
                     x_end = seg[0] + origin[0]
                     y_end = seg[1] + origin[1]
+                    
+                    ### Prevents loops from going across the PCB when the loop is split
+                    if x_start > 0 and x_end < 0 and (x_start-x_end) > 100:
+                        x_end = x_start
+                    if x_start < 0 and x_end > 0 and (x_start-x_end) < 100:
+                        x_end = x_start
+                    
 
                     #print("[%5.2f %5.2f][%5.2f %5.2f] in [%5.2f %5.2f %5.2f %5.2f]?? \n" % (x_start, y_start,
                     #x_end, y_end, bounds[0],bounds[1], bounds[2], bounds[3]))
-
+                    if side is not None:
+                        if side == 'left':
+                            if x_start > bound or x_end > bound:
+                                continue
+                        if side == 'right':
+                            if x_start < bound or x_end < bound:
+                                continue
                     if bounds_wholeloop or _check_bounds(np.array([[x_start, y_start],[x_end, y_end], ]), bounds):
                         file.write(
                             "    (segment (start %.2f %.4f) (end %.2f %.2f) (width %.2f) (layer %s) (net %d))\n"

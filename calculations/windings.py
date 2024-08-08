@@ -7,9 +7,27 @@ from bfieldtools.contour import scalar_contour
 import pkg_resources
 import mosek
 
+def generate_windings(coil_type, new_radius_scale=0.73/2, new_height_scale=0.50/2, n_contours=3):
+    """
+    Generate windings for the coil.
 
-def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contours=2, coil_type='Y'):
-            # COIL TYPE IS FOR THE ROOMS PERSPECTIVE
+    Parameters
+    ----------
+    new_radius_scale : float, optional
+        The multiplier for the mesh's radius, by default 0.73/2
+    new_height_scale : float, optional
+        The multiplier for the mesh's height, by default 0.40/2
+    n_contours : int, optional
+        How many contours the windings should take, by default 3
+    coil_type : str, optional
+        The coil type, expects either 'X','Y','Z' based on the sheilded rooms reference frame, by default 'Y'
+
+    Returns
+    -------
+    tuple
+        A tuple containing the vertices, faces, stream functions, loops, target points, and target field.
+    """
+    
     # Load example coil mesh
     coilmesh = trimesh.load(
         file_obj=pkg_resources.resource_filename(
@@ -17,17 +35,29 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
         ),
         process=True,
     )
+    ### Adjust the coil mesh for the new radius and height
+    ### This is the decided scaling for each of the meshes
+    if coil_type == 'X':
+        n_contours = 3
+        new_radius_scale = 1.0
 
+    if coil_type == 'Y': 
+        n_contours = 3
+        new_radius_scale = 0.98
+    if coil_type == 'Z':
+        n_contours = 3 
+        new_radius_scale = 0.96
     coilmesh1 = coilmesh.copy()
 
     # Adjust the coil mesh vertices for the new radius and height
     coilmesh1.vertices[:, :2] *= new_radius_scale  # Scale x and y coordinates for radius
     coilmesh1.vertices[:, 2] *= new_height_scale  # Scale z coordinate for height
 
+
     # Create MeshConductor
     coil = MeshConductor(
         verts=coilmesh1.vertices,
-        tris=coilmesh1.faces,
+         tris=coilmesh1.faces,
         fix_normals=True,
         basis_name="suh",
         N_suh=400,
@@ -35,8 +65,8 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
 
     # Define target points
     center = np.array([0, 0, 0])
-    sidelength = 0.3  # 0.2 meter
-    n = 8
+    sidelength = 0.4  # 0.3 meter
+    n = 9
     xx = np.linspace(-sidelength / 2, sidelength / 2, n)
     yy = np.linspace(-sidelength / 2, sidelength / 2, n)
     zz = np.linspace(-sidelength / 2, sidelength / 2, n)
@@ -51,9 +81,9 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
 
     # Define the undesired magnetic field
     undesired_field = np.zeros(target_points.shape)
-    if coil_type == 'X': undesired_field[:, 1] = 25e-9      # Example non-uniform field in x-direction
-    elif coil_type == 'Y': undesired_field[:, 2] = 25e-9    # Example non-uniform field in y-direction
-    elif coil_type == 'Z': undesired_field[:, 0] = 25e-9    # Example non-uniform field in z-direction
+    if coil_type == 'X': undesired_field[:, 1] = 25e-9      # Example non-uniform field in x-direction (rooms reference frame)
+    elif coil_type == 'Y': undesired_field[:, 2] = 25e-9    # Example non-uniform field in y-direction (rooms reference frame)
+    elif coil_type == 'Z': undesired_field[:, 0] = 25e-9    # Example non-uniform field in z-direction (rooms reference frame)
     else: raise ValueError("Invalid coil type. Must be 'X', 'Y', or 'Z'.")
     target_field = -undesired_field
 
@@ -79,6 +109,7 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
     if coil.s is not None:
         loops = scalar_contour(coil.mesh, coil.s.vert, N_contours=n_contours)
 
+        #Save the data for the coil through Pickle to make use of faster code testing and debugging
         if coil_type == 'X':
             with open('coilmesh_X.pkl', 'wb') as f:
                 pickle.dump({'vertices': coilmesh1.vertices, 'faces': coilmesh1.faces}, f)
@@ -113,9 +144,8 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
     else:
         return False
 
-
 if __name__ == "__main__":
-    success = generate_windings(coil_type='Y')
+    success = generate_windings(coil_type='Z')
     if success:
         print("Windings generated and saved successfully.")
     else:

@@ -3,6 +3,7 @@ import scipy
 import trimesh
 import pyvista as pv
 import mosek
+import math
 import matplotlib.pyplot as plt
 from bfieldtools.mesh_conductor import MeshConductor
 from bfieldtools.coil_optimize import optimize_streamfunctions
@@ -25,7 +26,7 @@ transformed to be a planar coil for PCB fabrication.
 """
 
 
-def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contours=3, coil_type='Y'):
+def generate_windings(coil_type, new_diamater=0.73/2, new_height_scale=0.50/2, n_contours=3):
     """
     Generate windings for the coil.
 
@@ -57,18 +58,20 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
     ### This is the decided scaling for each of the meshes
     if coil_type == 'X':
         n_contours = 3
-        new_radius_scale = 0.75/2
+        new_diameter = 1.0
+
     if coil_type == 'Y': 
-        n_contours = 2
-        new_radius_scale = 0.73/2
+        n_contours = 3
+        new_diameter= 0.98
     if coil_type == 'Z':
         n_contours = 3 
-        new_radius_scale = 0.74/2
+        new_diameter = 0.96
     coilmesh1 = coilmesh.copy()
 
     # Adjust the coil mesh vertices for the new radius and height
-    coilmesh1.vertices[:, :2] *= new_radius_scale  # Scale x and y coordinates for radius
+    coilmesh1.vertices[:, :2] *= new_diameter  # Scale x and y coordinates for radius
     coilmesh1.vertices[:, 2] *= new_height_scale  # Scale z coordinate for height
+
 
     # Create MeshConductor
     coil = MeshConductor(
@@ -81,8 +84,8 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
 
     # Define target points
     center = np.array([0, 0, 0])
-    sidelength = 0.3  # 0.3 meter
-    n = 8
+    sidelength = 0.4  # 0.4 meter
+    n = 9
     xx = np.linspace(-sidelength / 2, sidelength / 2, n)
     yy = np.linspace(-sidelength / 2, sidelength / 2, n)
     zz = np.linspace(-sidelength / 2, sidelength / 2, n)
@@ -127,38 +130,18 @@ def generate_windings(new_radius_scale=0.73/2, new_height_scale=0.40/2, n_contou
 
         #Save the data for the coil through Pickle to make use of faster code testing and debugging
         if coil_type == 'X':
-            with open('coilmesh_X.pkl', 'wb') as f:
+            with open(f'coilmesh_{coil_type}.pkl', 'wb') as f:
                 pickle.dump({'vertices': coilmesh1.vertices, 'faces': coilmesh1.faces}, f)
 
-            with open('loops_X.pkl', 'wb') as f:
+            with open(f'loops_{coil_type}.pkl', 'wb') as f:
                 pickle.dump(loops, f)
 
-            with open('target_points_X.pkl', 'wb') as f:
+            with open(f'target_points_{coil_type}.pkl', 'wb') as f:
                 pickle.dump(target_points, f)
 
-        if coil_type == 'Y':
-            with open('coilmesh_Y.pkl', 'wb') as f:
-                pickle.dump({'vertices': coilmesh1.vertices, 'faces': coilmesh1.faces}, f)
-
-            with open('loops_Y.pkl', 'wb') as f:
-                pickle.dump(loops, f)
-
-            with open('target_points_Y.pkl', 'wb') as f:
-                pickle.dump(target_points, f)
-        
-        if coil_type == 'Z':
-            with open('coilmesh_Z.pkl', 'wb') as f:
-                pickle.dump({'vertices': coilmesh1.vertices, 'faces': coilmesh1.faces}, f)
-
-            with open('loops_Z.pkl', 'wb') as f:
-                pickle.dump(loops, f)
-
-            with open('target_points_Z.pkl', 'wb') as f:
-                pickle.dump(target_points, f)
-
-        return coilmesh1.vertices, coilmesh1.faces, coil.s, loops, target_points, target_field
+        return coilmesh1.vertices, coilmesh1.faces, coil.s, loops, target_points, target_field, new_diameter
     else:
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None
 
 
 class CylindricalCoil:
@@ -185,13 +168,13 @@ class CylindricalCoil:
         The resistance of the coil in ohms.
     """
 
-    def __init__(self, coil_type='X'):
+    def __init__(self, coil_type):
         """
         Initialize the CylindricalCoil class.
 
         Parameters
         ----------
-        new_radius_scale : float
+        new_diameter : float
             The multiplier for the mesh's radius.
         new_height_scale : float
             The multiplier for the mesh's height.
@@ -201,7 +184,7 @@ class CylindricalCoil:
             The coil type, expects either 'X','Y','Z' based on the sheilded rooms reference frame, by default 'X'.
         """
 
-        vertices, faces, s, loops, target_points, target_field = generate_windings(coil_type)
+        vertices, faces, s, loops, target_points, target_field, diameter = generate_windings(coil_type)
 
         self.vertices = vertices
         self.faces = faces
@@ -209,13 +192,21 @@ class CylindricalCoil:
         self.loops = loops
         self.target_points = target_points
         self.target_field = target_field
-        self.trace_width = 4     # in mm
+        self.trace_width = 5     # in mm
         self.cu_oz = 2           # oz per ft^2
         self.FCu = list()
         self.BCu = list()
         self.line_conductor_ = LineConductor(loops=loops)
-        self.flatloops = flatten_loops(loops)
+        self.flatloops = flatten_loops(loops, coil_type)
         self.coil_type = coil_type
+        self.radius = diameter/2
+        self.circum = math.pi*2*self.radius *1000
+        self.color = determine_color_auto(self.loops, (0, 0, 0))
+
+        # Scale the loops
+        for i, loop in enumerate(self.flatloops):
+            self.flatloops[i][:, 0] = loop[:, 0] * 1000
+            self.flatloops[i][:, 1] = loop[:, 1] * 1000
 
     def predict(self, target_points):
         """Predict the field.
@@ -308,7 +299,7 @@ class CylindricalCoil:
             # Check if the loop is closed by comparing the first and last points
             if not np.allclose(loop[0], loop[-1]):
                 loop = np.vstack([loop, loop[0]])  # make closed loop
-            loops.append((np.array(loop) * 1000))
+            loops.append((np.array(loop)))
 
 
         colors = determine_color_auto(self.loops, (0,0,0))
@@ -322,25 +313,36 @@ class CylindricalCoil:
                 sorted_points = loop_arr[loop_arr[:, 0].argsort()]
                 loop_arr = sorted_points
             plt.plot(loop_arr[:, 0], loop_arr[:, 1], color=color)
-
-        ld = LineDrawer(fig)
-        line_cuts, line_cuts_shifted = ld.get_line_cuts()
-
-        fig, axes = plt.subplots(2, 1, sharex=True, sharey=True, figsize=(8, 8))
-        for line_cut, line_cut_shifted in zip(line_cuts, line_cuts_shifted):
-            continuous_loop, reverse_paths, _, _, _, direction = join_loops_at_cuts(
-                loops, line_cut, line_cut_shifted, colors)
-            self.FCu.append(continuous_loop)
-            self.BCu.append(reverse_paths)
-
-            color = 'r' if direction == 'cc' else 'b'
-            axes[0].plot(continuous_loop[:, 0], continuous_loop[:, 1], f'{color}-', alpha=0.6)
-            axes[1].plot(reverse_paths[:, 0], reverse_paths[:, 1], 'g', zorder=0, linewidth=3, alpha=0.6)
         plt.show()
 
+        # ld = LineDrawer(fig)
+        # line_cuts, line_cuts_shifted = ld.get_line_cuts()
 
-    def save(self, pcb_fname, kicad_header_fname, bounds=None,
-             origin=(750, 750), bounds_wholeloop=True):
+        # fig, axes = plt.subplots(2, 1, sharex=True, sharey=True, figsize=(8, 8))
+        # for line_cut, line_cut_shifted in zip(line_cuts, line_cuts_shifted):
+        #     continuous_loop, reverse_paths, _, _, _, direction = join_loops_at_cuts(
+        #         loops, line_cut, line_cut_shifted, colors)
+        #     self.FCu.append(continuous_loop)
+        #     self.BCu.append(reverse_paths)
+
+        #     color = 'r' if direction == 'cc' else 'b'
+        #     axes[0].plot(continuous_loop[:, 0], continuous_loop[:, 1], f'{color}-', alpha=0.6)
+        #     axes[1].plot(reverse_paths[:, 0], reverse_paths[:, 1], 'g', zorder=0, linewidth=3, alpha=0.6)
+        # plt.show()
+
+    def assign_front_back(self):
+        """Assign front and back loops."""
+        color = determine_color_auto(self.loops, (0, 0, 0))
+        
+        for i, _ in enumerate(self.flatloops):
+            if color[i] == 'r':
+                self.FCu.append(self.flatloops[i])
+            else:
+                self.BCu.append(self.flatloops[i])
+
+
+    def save(self, pcb_fname, kicad_header_fname, origin,
+             bounds=None, bounds_wholeloop=True, side = None, bound = 0):
         """Save the files to be loaded in KICAD.
 
         Parameters
@@ -354,27 +356,37 @@ class CylindricalCoil:
         origin : tuple of (x, y)
             The origin in mm.
         """
-        FCu_truncated = list()
-        BCu_truncated = list()
-        for FCu_loop, BCu_loop in zip(self.FCu, self.BCu):
-            if _check_bounds(FCu_loop, bounds) or (bounds_wholeloop is False):
-                FCu_truncated.append(FCu_loop)
-                BCu_truncated.append(BCu_loop)
+        # FCu_truncated = list()
+        # BCu_truncated = list()
+        # for FCu_loop, BCu_loop in zip(self.FCu, self.BCu):
+        #     if _check_bounds(FCu_loop, bounds) or (bounds_wholeloop is False):
+        #         FCu_truncated.append(FCu_loop)
+        #         BCu_truncated.append(BCu_loop)
         
         export_to_kicad(pcb_fname=pcb_fname,
                         kicad_header_fname=kicad_header_fname,
                         origin=origin,
-                        loops={'F.Cu': FCu_truncated, 'B.Cu': BCu_truncated},
+                        loops={'F.Cu': self.FCu, 'B.Cu': self.BCu},
                         net=1, scaling=1, trace_width=self.trace_width,
-                        bounds=bounds, bounds_wholeloop=bounds_wholeloop)
+                        bounds=bounds, bounds_wholeloop=bounds_wholeloop,
+                        side = side, bound = bound)
 
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-
+    coil_type = 'X'
+    pcb_name = f'coil_{coil_type}_testing_size.kicad_pcb' 
+    kicad_header_fname = 'kicad_header.txt'
+    bounds = (-1300,1300,-1300,1300)
+    
     # Create an instance of CylindricalCoil
-    coil = CylindricalCoil(coil_type='X')
-
-    # Make cuts to join loops
-    coil.make_cuts()
+    coil = CylindricalCoil(coil_type=coil_type)
+    origin = (-(coil.circum / 2.0 ),0)
+    length = coil.length
+    print(f"Length: {length}")
+    coil.assign_front_back()
+    coil.save(pcb_name, kicad_header_fname, bounds=bounds, origin=origin, side = "left", bound = -200)
+    print(f"Resiatance: {coil.resistance}")
+    
+    
 
