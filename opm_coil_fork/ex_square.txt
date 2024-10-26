@@ -1,0 +1,2 @@
+Plotted to '/home/jack/SMEG/opm_coil_fork/pdf/coil_X_testing (copy)-F_Cu.pdf'.
+Info: Done.

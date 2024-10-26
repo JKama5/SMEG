@@ -1,0 +1,11 @@
+Warning: Width correction constrained.  The width correction value must be in the range of [0.000001 mm; 0.199999 mm] for the current design rules.
+Plotted to '/home/jack/SMEG/opm_coil_fork/coil_X_latest-F_Cu.pdf'.
+Plotted to '/home/jack/SMEG/opm_coil_fork/coil_X_latest-B_Cu.pdf'.
+Plotted to '/home/jack/SMEG/opm_coil_fork/coil_X_latest-F_Paste.pdf'.
+Plotted to '/home/jack/SMEG/opm_coil_fork/coil_X_latest-B_Paste.pdf'.
+Plotted to '/home/jack/SMEG/opm_coil_fork/coil_X_latest-F_Silkscreen.pdf'.
+Plotted to '/home/jack/SMEG/opm_coil_fork/coil_X_latest-B_Silkscreen.pdf'.
+Plotted to '/home/jack/SMEG/opm_coil_fork/coil_X_latest-F_Mask.pdf'.
+Plotted to '/home/jack/SMEG/opm_coil_fork/coil_X_latest-B_Mask.pdf'.
+Plotted to '/home/jack/SMEG/opm_coil_fork/coil_X_latest-Edge_Cuts.pdf'.
+Info: Done.
