@@ -61,7 +61,7 @@ def generate_windings(coil_type, new_diamater=0.96/2, new_height_scale=0.50/2, n
         new_diameter = 1.0
 
     if coil_type == 'Y': 
-        n_contours = 2
+        n_contours = 11
         new_diameter= 0.98
     if coil_type == 'Z':
         n_contours = 3 
@@ -384,8 +384,8 @@ class CylindricalCoil:
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    coil_type = 'Z'
-    pcb_name = f'final_coil_{coil_type}_testing_size.kicad_pcb' 
+    coil_type = 'Y'
+    pcb_name = f'final_coil_{coil_type}.kicad_pcb' 
     kicad_header_fname = 'kicad_header.txt'
     bounds = (-2300,2300,-2300,2300)
     
