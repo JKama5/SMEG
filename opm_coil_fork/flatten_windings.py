@@ -30,7 +30,7 @@ def flatten_loops(loops,type):
         theta = np.arctan2(points[:, 1], points[:, 0])
 #0.017
         if type != 'X': theta = (theta - 0.1) % (2 * np.pi) # accounts for radial error in mesh generation
-        else: theta = (theta + 0.1) % (2 * np.pi)
+        else: theta = (theta - 0.1) % (2 * np.pi)
 
         # Create new points with flattened coordinates for the PCB
         flattened_points = np.zeros_like(points)

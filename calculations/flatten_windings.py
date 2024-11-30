@@ -1,6 +1,5 @@
 import pyvista as pv
 import numpy as np
-import matplotlib.pyplot as plt
 
 def determine_color_auto(current_loops, origin):
     """Determine the color of each loop automatically based on the direction."""

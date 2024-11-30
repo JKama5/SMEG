@@ -26,20 +26,20 @@ transformed to be a planar coil for PCB fabrication.
 """
 
 
-def generate_windings(coil_type, new_diamater=0.73/2, new_height_scale=0.50/2, n_contours=3):
+def generate_windings(coil_type, new_diamater=0.96/2, new_height_scale=0.50/2, n_contours=3):
     """
     Generate windings for the coil.
 
     Parameters
     ----------
     new_radius_scale : float, optional
-        The multiplier for the mesh's radius, by default 0.73/2
+        The multiplier for the mesh's radius, by default 0.96/2
     new_height_scale : float, optional
-        The multiplier for the mesh's height, by default 0.40/2
+        The multiplier for the mesh's height, by default 0.50/2
     n_contours : int, optional
         How many contours the windings should take, by default 3
     coil_type : str, optional
-        The coil type, expects either 'X','Y','Z' based on the sheilded rooms reference frame, by default 'Y'
+        The coil type, expects either 'X','Y','Z' based on the sheilded rooms reference frame, by default 'Z'
 
     Returns
     -------
@@ -61,7 +61,7 @@ def generate_windings(coil_type, new_diamater=0.73/2, new_height_scale=0.50/2, n
         new_diameter = 1.0
 
     if coil_type == 'Y': 
-        n_contours = 3
+        n_contours = 11
         new_diameter= 0.98
     if coil_type == 'Z':
         n_contours = 3 
@@ -139,6 +139,16 @@ def generate_windings(coil_type, new_diamater=0.73/2, new_height_scale=0.50/2, n
             with open(f'target_points_{coil_type}.pkl', 'wb') as f:
                 pickle.dump(target_points, f)
 
+        if coil_type == 'Z':
+            with open(f'final_coilmesh_{coil_type}.pkl', 'wb') as f:
+                pickle.dump({'vertices': coilmesh1.vertices, 'faces': coilmesh1.faces}, f)
+
+            with open(f'final_loops_{coil_type}.pkl', 'wb') as f:
+                pickle.dump(loops, f)
+
+            with open(f'final_target_points_{coil_type}.pkl', 'wb') as f:
+                pickle.dump(target_points, f)
+
         return coilmesh1.vertices, coilmesh1.faces, coil.s, loops, target_points, target_field, new_diameter
     else:
         return None, None, None, None, None, None, None
@@ -179,7 +189,7 @@ class CylindricalCoil:
         new_height_scale : float
             The multiplier for the mesh's height.
         n_contours : int, optional
-            How many contours the windings should take, by default 3.
+            How many contours the windings should take, by default 3 (Y is 2).
         coil_type : str, optional
             The coil type, expects either 'X','Y','Z' based on the sheilded rooms reference frame, by default 'X'.
         """
@@ -374,10 +384,10 @@ class CylindricalCoil:
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    coil_type = 'X'
-    pcb_name = f'coil_{coil_type}_testing_size.kicad_pcb' 
+    coil_type = 'Y'
+    pcb_name = f'final_coil_{coil_type}.kicad_pcb' 
     kicad_header_fname = 'kicad_header.txt'
-    bounds = (-1300,1300,-1300,1300)
+    bounds = (-2300,2300,-2300,2300)
     
     # Create an instance of CylindricalCoil
     coil = CylindricalCoil(coil_type=coil_type)
@@ -385,7 +395,7 @@ if __name__ == '__main__':
     length = coil.length
     print(f"Length: {length}")
     coil.assign_front_back()
-    coil.save(pcb_name, kicad_header_fname, bounds=bounds, origin=origin, side = "left", bound = -200)
+    coil.save(pcb_name, kicad_header_fname, bounds=bounds, origin=origin, side = "left", bound = 2000)
     print(f"Resiatance: {coil.resistance}")
     
     
